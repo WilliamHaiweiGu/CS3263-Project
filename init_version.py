@@ -100,21 +100,26 @@ def main():
         # Evaluate on training data
         y_train_pred = predict(model, X_train)
         train_score = f1_score(y_train, y_train_pred, average='macro')
-        train_scores.append(train_score)
+        train_accuracy = (y_train == y_train_pred).mean()
+        train_scores.append((train_score, train_accuracy))
 
         # Evaluate on test data
         y_test_pred = predict(model, X_test)
         test_score = f1_score(y_test, y_test_pred, average='macro')
-        test_scores.append(test_score)
+        test_accuracy = (y_test == y_test_pred).mean()
+        test_scores.append((test_score, test_accuracy))
 
-        print(f"Iteration {i + 1}: Train Score = {train_score}, Test Score = {test_score}")
+        print(f"Iteration {i + 1}: Train F1 Score = {train_score}, Train Accuracy = {train_accuracy}, "
+              f"Test F1 Score = {test_score}, Test Accuracy = {test_accuracy}")
 
-    # Calculate average scores
-    avg_train_score = mean(train_scores)
-    avg_test_score = mean(test_scores)
+        # Calculate average scores
+        avg_train_score = mean([score[0] for score in train_scores])
+        avg_train_accuracy = mean([score[1] for score in train_scores])
+        avg_test_score = mean([score[0] for score in test_scores])
+        avg_test_accuracy = mean([score[1] for score in test_scores])
 
-    print(f"\nAverage Train Score: {avg_train_score}")
-    print(f"Average Test Score: {avg_test_score}")
+        print(f"\nAverage Train F1 Score: {avg_train_score}, Average Train Accuracy: {avg_train_accuracy}")
+        print(f"Average Test F1 Score: {avg_test_score}, Average Test Accuracy: {avg_test_accuracy}")
 
     
 # Allow the main class to be invoked if run as a file.
