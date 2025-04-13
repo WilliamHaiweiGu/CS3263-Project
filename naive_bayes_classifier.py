@@ -82,15 +82,15 @@ def main():
         acc = accuracy_score(y_test, y_pred)
         acc_gnb = accuracy_score(y_test, y_pred_gnb)
         # Calculate F1 score
-        f1 = f1_score(y_test, y_pred)
-        f1_gnb = f1_score(y_test, y_pred_gnb)
+        f1 = f1_score(y_test, y_pred, average='macro')
+        f1_gnb = f1_score(y_test, y_pred_gnb, average='macro')
         acc_scores.append(acc)
         acc_scores_gnb.append(acc_gnb)
         f1_scores.append(f1)
         f1_scores_gnb.append(f1_gnb)
 
-        print(f"Iteration {i + 1}: MultinomialNB Accuracy = {acc:.4f}, MultinomialNB F1 Score = {f1:.4f}")
-        print(f"Iteration {i + 1}: GaussianNB Accuracy = {acc_gnb:.4f}, GaussianNB F1 Score = {f1_gnb:.4f}")
+        print(f"Iteration {i + 1}: MultinomialNB Accuracy = {acc:.4f}, MultinomialNB Macro F1 Score = {f1:.4f}")
+        print(f"Iteration {i + 1}: GaussianNB Accuracy = {acc_gnb:.4f}, GaussianNB Macro F1 Score = {f1_gnb:.4f}")
         #print(f"Iteration {i + 1}: Test F1 Score = {f1_scores}, Test Accuracy = {acc_scores}")
     
     # Calculate average scores
@@ -98,9 +98,9 @@ def main():
     avg_f1_gnb = np.mean(f1_scores_gnb)
     avg_acc = np.mean(acc_scores)
     avg_acc_gnb = np.mean(acc_scores_gnb)
-    print(f"Average F1 Score (MultinomialNB): {avg_f1:.4f}")
+    print(f"Average Macro F1 Score (MultinomialNB): {avg_f1:.4f}")
     print(f"Average Accuracy (MultinomialNB): {avg_acc:.4f}")
-    print(f"Average F1 Score (GaussianNB): {avg_f1_gnb:.4f}")
+    print(f"Average Macro F1 Score (GaussianNB): {avg_f1_gnb:.4f}")
     print(f"Average Accuracy (GaussianNB): {avg_acc_gnb:.4f}")
 
 
