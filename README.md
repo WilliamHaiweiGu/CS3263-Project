@@ -1,4 +1,4 @@
-# CS3264-Project
+# CS3263-Project
 
 *Please do not push weights/arrays/checkpoints to this repository.* Push only code plz :)
 
