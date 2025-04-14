@@ -10,7 +10,7 @@ from scipy.sparse import hstack
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.naive_bayes import MultinomialNB, GaussianNB
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 
 nltk.download('punkt')
 nltk.download('punkt_tab')
@@ -25,6 +25,11 @@ def preprocess_text(text):
     text = text.lower()
     # Remove punctuation and digits (keep only letters and whitespace)
     text = re.sub(r'[^a-z\s]', ' ', text)
+    text = re.sub(r"@[A-Za-z0-9]+", ' ', text)
+    text = re.sub(r"https?://[A-Za-z0-9./]+", ' ', text)
+    text = re.sub(r"[^a-zA-z.!?'0-9]", ' ', text)
+    text = re.sub('\t', ' ', text)
+    text = re.sub(r" +", ' ', text)
     # Tokenize the text
     tokens = nltk.word_tokenize(text)
     # Remove stopwords and non-alphabetic tokens
@@ -34,7 +39,7 @@ def preprocess_text(text):
     return tokens
 
 def main():
-    df = pd.read_csv('Sentiment_dataset.csv')
+    df = pd.read_csv('/Users/jerry/Documents/GitHub/CS3263-Project/Sentiment_dataset.csv')
     df.drop(['url'], axis=1)
 
     #df['clean_text'] = df['text'].apply(lambda x: ' '.join([lemmatizer.lemmatize(tok) for tok in [word for word in word_tokenize(re.sub(r'[^a-z\s]', ' ', x.lower())) if word.isalpha() and word not in stop_words]]))
@@ -49,15 +54,15 @@ def main():
     X_text = tfidf_text.fit_transform(df['text'])
     X_all = hstack([X_news, X_reddit, X_text])
 
-    iterations = 5
+    iterations = 10
     f1_scores = []
     f1_scores_gnb = []
     acc_scores = []
     acc_scores_gnb = []
 
     for i in range(iterations):
-        # Split the data into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(X_all, labels, test_size=0.2, random_state=i, stratify=labels)
+        # Split the data into training and testing sets, ONLY USE THE TEXT COLUMN
+        X_train, X_test, y_train, y_test = train_test_split(X_text, labels, test_size=0.2, random_state=42+i, stratify=labels)
 
         # Handle class imbalance with class weights
         class_weights = compute_class_weight(class_weight="balanced", classes=np.unique(y_train), y=y_train)
@@ -84,6 +89,12 @@ def main():
         # Calculate F1 score
         f1 = f1_score(y_test, y_pred, average='macro')
         f1_gnb = f1_score(y_test, y_pred_gnb, average='macro')
+        cf_matrix = confusion_matrix(y_test, y_pred)
+        cf_matrix_gnb = confusion_matrix(y_test, y_pred_gnb)
+        print("MultinomialNB Confusion Matrix:\n")
+        print(cf_matrix)
+        print("GaussianNB Confusion Matrix:\n")
+        print(cf_matrix_gnb)
         acc_scores.append(acc)
         acc_scores_gnb.append(acc_gnb)
         f1_scores.append(f1)
