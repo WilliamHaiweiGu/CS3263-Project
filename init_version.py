@@ -11,6 +11,7 @@ CS4248 ASSIGNMENT 2 Template
 import pandas as pd
 import random
 from sklearn.metrics import f1_score
+from sklearn.utils.class_weight import compute_class_weight
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import make_pipeline
@@ -22,6 +23,11 @@ from nltk.corpus import stopwords
 import nltk
 from sklearn.model_selection import train_test_split
 from statistics import mean
+from sklearn.metrics import confusion_matrix
+import seaborn as sns   
+import matplotlib.pyplot as plt
+import re
+import numpy as np
 
 # Download NLTK data
 nltk.download('wordnet')
@@ -29,6 +35,13 @@ nltk.download('stopwords')
 
 _NAME = "XiaoYan"
 _STUDENT_NUM = 'E0902032'
+
+def clean_text(text: str) -> str:
+    text = re.sub(r"@[A-Za-z0-9]+", ' ', text)
+    text = re.sub(r"https?://[A-Za-z0-9./]+", ' ', text)
+    text = re.sub(r"[^a-zA-z.!?'0-9]", ' ', text)
+    text = re.sub('\t', ' ', text)
+    return re.sub(r" +", ' ', text)
 
 def preprocess_text(text):
     ''' Custom text preprocessing function '''
@@ -58,8 +71,12 @@ def main():
     # Load the dataset
     dataset = pd.read_csv('Sentiment_dataset.csv')
     
-    # Drop 'text' and 'url' columns
-    dataset.drop(columns=['text', 'url'], inplace=True)
+    # Use 'text' as the predictor and drop unnecessary columns
+    dataset.drop(columns=['url', 'news_title', 'reddit_title'], inplace=True)
+
+    # apply text preprocessing
+    dataset['text'] = dataset['text'].apply(clean_text)
+    dataset['text'] = dataset['text'].apply(preprocess_text)
     
     # Convert 'sentiment' column to integer
     dataset['sentiment'] = dataset['sentiment'].astype(int)
@@ -81,18 +98,69 @@ def main():
         train, test = train_test_split(dataset, test_size=0.2, random_state=random.randint(0, 10000))
 
         # Assign train and test data
-        X_train = train['news_title'] + " " + train['reddit_title']
+        X_train = train['text']
         y_train = train['sentiment']
-        X_test = test['news_title'] + " " + test['reddit_title']
+        X_test = test['text']
         y_test = test['sentiment']
 
+        class_weights = compute_class_weight(class_weight="balanced", classes=np.unique(y_train), y=y_train)
+        class_weight_dict = dict(zip(np.unique(y_train), class_weights))
+        sample_weights = np.array([class_weight_dict[label] for label in y_train])
+
         # Model: Neural Network with TfidfVectorizer
-        model_nn_tfidf = make_pipeline(
-            TfidfVectorizer(stop_words='english', lowercase=True),
-            MLPClassifier(hidden_layer_sizes=(100,), max_iter=300, random_state=42)
+        model_nb_cv = make_pipeline(
+            CountVectorizer(stop_words='english', lowercase=True),
+            MultinomialNB(alpha=1)  
         )
 
-        model = model_nn_tfidf
+        # Model 2: Naive Bayes with TfidfVectorizer
+        model_nb_tfidf = make_pipeline(
+            TfidfVectorizer(stop_words='english', lowercase=True),
+            MultinomialNB(alpha=1)  
+        )
+        # train score: 0.525
+        # test score: 0.544
+
+        # Model 3: Logistic Regression with CountVectorizer
+        model_lr_cv = make_pipeline(
+            CountVectorizer(stop_words='english', lowercase=True),
+            LogisticRegression(max_iter=1000, C=0.5)  
+        )
+        # train score: 0.758
+        # test score: 0.705
+
+        # Model 4: Logistic Regression with TfidfVectorizer
+        model_lr_tfidf = make_pipeline(
+            TfidfVectorizer(stop_words='english', lowercase=True),
+            LogisticRegression(max_iter=1000, C=0.5)  
+        )
+        # train score: 0.631
+        # test score: 0.650
+
+
+        # Model 5: Neural Network with CountVectorizer
+        model_nn_cv1 = make_pipeline(
+            CountVectorizer(stop_words='english', lowercase=True),
+            MLPClassifier(hidden_layer_sizes=(150,), max_iter=500, alpha=0.001)  
+        )
+        # train score: 0.994
+        # test score: 0.719
+
+        # Model 6: Neural Network with CountVectorizer with different hyperparameters
+        model_nn_cv_2 = make_pipeline(
+            CountVectorizer(stop_words='english', lowercase=True),
+            MLPClassifier(hidden_layer_sizes=(100, 50), max_iter=500, alpha=0.001)
+        )
+        # train score: 0.994
+        # test score: 0.741
+
+        # Model 7: Neural Network with CountVectorizer with more hyperparameters
+        model_nn_cv_3 = make_pipeline(
+            CountVectorizer(stop_words='english', lowercase=True),
+            MLPClassifier(hidden_layer_sizes=(100,), max_iter=200, alpha=0.01, learning_rate_init=0.001, early_stopping=True)
+        )
+        # train score: 0.779
+        model = model_nb_cv
 
         # Train the model
         train_model(model, X_train, y_train)
@@ -111,6 +179,12 @@ def main():
 
         print(f"Iteration {i + 1}: Train F1 Score = {train_score}, Train Accuracy = {train_accuracy}, "
               f"Test F1 Score = {test_score}, Test Accuracy = {test_accuracy}")
+        
+        # print confusion matrix
+        
+        cm = confusion_matrix(y_test, y_test_pred)
+
+        print(cm)
 
         # Calculate average scores
         avg_train_score = mean([score[0] for score in train_scores])
@@ -118,8 +192,8 @@ def main():
         avg_test_score = mean([score[0] for score in test_scores])
         avg_test_accuracy = mean([score[1] for score in test_scores])
 
-        print(f"\nAverage Train F1 Score: {avg_train_score}, Average Train Accuracy: {avg_train_accuracy}")
-        print(f"Average Test F1 Score: {avg_test_score}, Average Test Accuracy: {avg_test_accuracy}")
+    print(f"\nAverage Train F1 Score: {avg_train_score}, Average Train Accuracy: {avg_train_accuracy}")
+    print(f"Average Test F1 Score: {avg_test_score}, Average Test Accuracy: {avg_test_accuracy}")
 
     
 # Allow the main class to be invoked if run as a file.
