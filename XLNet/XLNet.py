@@ -2,11 +2,13 @@ import gc
 import os
 import re
 import sys
-from typing import Any, Callable, List, Tuple, Optional
+from typing import Any, Callable, List, Optional, Tuple
 
+import nltk
 import numpy as np
 import pandas as pd
 import torch
+from nltk import WordNetLemmatizer
 from sklearn.metrics import confusion_matrix, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
@@ -71,14 +73,22 @@ torch.manual_seed(RAND_STATE)
 can_cuda: bool = torch.cuda.is_available()
 device = torch.device("cuda" if can_cuda else "cpu")
 print("PyTorch will use GPU:", can_cuda)
+nltk.download('punkt_tab')
+nltk.download('wordnet')
 
 
-def clean_text(text: str) -> str:
+def preprocess_text(text: str) -> str:
+    """Clean and tokenize text string into lemmatized tokens."""
+    text = text.lower()
+    text = re.sub(r'[^a-z\s]', ' ', text)
     text = re.sub(r"@[A-Za-z0-9]+", ' ', text)
     text = re.sub(r"https?://[A-Za-z0-9./]+", ' ', text)
     text = re.sub(r"[^a-zA-z.!?'0-9]", ' ', text)
     text = re.sub('\t', ' ', text)
-    return re.sub(r" +", ' ', text)
+    text = re.sub(r" +", ' ', text)
+    tokens = nltk.word_tokenize(text)
+    lemmatizer = WordNetLemmatizer()
+    return ' '.join(map(lemmatizer.lemmatize, filter(str.isalpha, tokens)))
 
 
 def make_tensor_dataset(raw_texts: List[str], raw_labels: List[int]) -> TensorDataset:
@@ -106,7 +116,7 @@ def comp_datasets(sample_proportion: int | float) -> Callable[[], Tuple[TensorDa
             except TypeError | ValueError:
                 continue
             raw_labels.append(truth_label)
-            raw_texts.append(row.text)
+            raw_texts.append(preprocess_text(row.text))
         del df
         X_train, X_test, y_train, y_test = train_test_split(raw_texts, raw_labels, test_size=TEST_SIZE,
                                                             random_state=RAND_STATE)
