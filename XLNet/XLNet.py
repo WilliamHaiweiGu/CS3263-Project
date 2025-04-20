@@ -116,7 +116,7 @@ def comp_datasets(sample_proportion: int | float) -> Callable[[], Tuple[TensorDa
             except TypeError | ValueError:
                 continue
             raw_labels.append(truth_label)
-            raw_texts.append(row.text)
+            raw_texts.append(preprocess_text(row.text))
         del df
         X_train, X_test, y_train, y_test = train_test_split(raw_texts, raw_labels, test_size=TEST_SIZE,
                                                             random_state=RAND_STATE)
